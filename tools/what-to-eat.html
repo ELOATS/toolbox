@@ -346,10 +346,10 @@
       left.innerHTML = `<span class="dot" style="background:${item.off ? 'transparent' : COLORS[idx % COLORS.length]};border:1px solid ${COLORS[idx % COLORS.length]}"></span>`;
       const span = document.createElement('span'); span.className = 'name'; span.textContent = item.name;
       left.appendChild(span);
-      left.onclick = () => { item.off = !item.off; update(); };
+      left.onclick = () => { if (spinning) return; item.off = !item.off; update(); };
       const del = document.createElement('button');
       del.className = 'icon-btn'; del.textContent = '✕'; del.title = '删除'; del.setAttribute('aria-label', `删除${item.name}`);
-      del.onclick = () => { state.items.splice(idx, 1); update(); };
+      del.onclick = () => { if (spinning) return; state.items.splice(idx, 1); update(); };
       li.append(left, del);
       ul.appendChild(li);
     });
