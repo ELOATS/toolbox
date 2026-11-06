@@ -6,73 +6,124 @@
 <title>今天吃什么</title>
 <style>
   :root {
-    --bg: #fff8f0; --card: #ffffff; --text: #2b2118; --muted: #8a7a6b;
-    --accent: #ff6b35; --accent-2: #ffb703; --border: #f0e2d2;
-    --shadow: 0 8px 24px rgba(120, 70, 20, .12);
+    --bg-1: #e9ecff; --bg-2: #fdeaf5; --text: #1d1b2e; --muted: rgba(29, 27, 46, .58);
+    --accent: #5b5bff; --accent-text: #ffffff;
+    --glass: rgba(255, 255, 255, .38); --glass-strong: rgba(255, 255, 255, .55);
+    --glass-border: rgba(255, 255, 255, .75); --glass-edge: rgba(255, 255, 255, .95);
+    --glass-shadow: 0 20px 50px rgba(60, 50, 140, .18), 0 2px 6px rgba(60, 50, 140, .08);
+    --hover: rgba(255, 255, 255, .45);
+    --blob-1: #ff8fb1; --blob-2: #7aa8ff; --blob-3: #ffd27a; --blob-4: #9d7bff;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #1c1712; --card: #28211a; --text: #f5ebe0; --muted: #b3a291;
-      --accent: #ff7f50; --accent-2: #ffc94d; --border: #3a3027;
-      --shadow: 0 8px 24px rgba(0, 0, 0, .4); }
+    :root:not([data-theme="light"]) {
+      --bg-1: #0b0e1f; --bg-2: #1a1030; --text: #f2f1ff; --muted: rgba(242, 241, 255, .6);
+      --accent: #8a8cff;
+      --glass: rgba(255, 255, 255, .08); --glass-strong: rgba(255, 255, 255, .14);
+      --glass-border: rgba(255, 255, 255, .18); --glass-edge: rgba(255, 255, 255, .35);
+      --glass-shadow: 0 20px 50px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3);
+      --hover: rgba(255, 255, 255, .1);
+      --blob-1: #c2185b; --blob-2: #2f5bff; --blob-3: #b8860b; --blob-4: #6a35ff;
+    }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif; }
-  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
-  header { text-align: center; margin-bottom: 20px; }
-  h1 { margin: 0; font-size: 2rem; }
+  html { min-height: 100%; }
+  body { margin: 0; min-height: 100vh; color: var(--text); overflow-x: hidden;
+    background: linear-gradient(135deg, var(--bg-1), var(--bg-2)); background-attachment: fixed;
+    font-family: -apple-system, "SF Pro Display", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif; }
+  /* glowing colour blobs behind the glass */
+  .aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .aurora i { position: absolute; width: 46vmax; height: 46vmax; border-radius: 50%;
+    filter: blur(70px); opacity: .7; animation: drift 22s ease-in-out infinite alternate; }
+  .aurora i:nth-child(1) { background: var(--blob-1); top: -12vmax; left: -10vmax; }
+  .aurora i:nth-child(2) { background: var(--blob-2); bottom: -16vmax; right: -12vmax; animation-delay: -6s; }
+  .aurora i:nth-child(3) { background: var(--blob-3); top: 30%; left: 40%; width: 30vmax; height: 30vmax; opacity: .5; animation-delay: -11s; }
+  .aurora i:nth-child(4) { background: var(--blob-4); top: 50%; left: -8vmax; width: 32vmax; height: 32vmax; animation-delay: -3s; }
+  @keyframes drift { to { transform: translate(6vmax, -4vmax) scale(1.12); } }
+  @media (prefers-reduced-motion: reduce) { .aurora i { animation: none; } }
+
+  main { max-width: 980px; margin: 0 auto; padding: 28px 16px 48px; }
+  header { text-align: center; margin-bottom: 22px; }
+  h1 { margin: 0; font-size: 2.1rem; letter-spacing: .02em; }
   header p { margin: 6px 0 0; color: var(--muted); }
-  .layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
-  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-    padding: 16px; box-shadow: var(--shadow); }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+  .glass { position: relative; background: var(--glass); border-radius: 28px;
+    border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%);
+    box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 rgba(255,255,255,.08); }
+  /* specular sheen along the top edge */
+  .glass::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(160deg, rgba(255,255,255,.45) 0%, rgba(255,255,255,0) 38%); opacity: .6; }
+  .card { padding: 18px; }
+  .card > * { position: relative; }
+
   .wheel-wrap { position: relative; width: 100%; max-width: 460px; margin: 0 auto; aspect-ratio: 1; }
-  canvas { width: 100%; height: 100%; display: block; }
-  .pointer { position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
-    width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent;
-    border-top: 30px solid var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,.3)); z-index: 2; }
+  canvas { width: 100%; height: 100%; display: block; filter: drop-shadow(0 18px 30px rgba(40, 30, 120, .25)); }
+  .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 38px; z-index: 2;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,.25)); }
   .hub { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 22%; aspect-ratio: 1; border-radius: 50%; border: 4px solid var(--card);
-    background: var(--accent); color: #fff; font-size: 1.1rem; font-weight: 700;
-    cursor: pointer; box-shadow: var(--shadow); }
+    width: 23%; aspect-ratio: 1; border-radius: 50%; cursor: pointer;
+    color: var(--text); font-size: 1.15rem; font-weight: 700; letter-spacing: .05em;
+    background: radial-gradient(circle at 35% 28%, rgba(255,255,255,.85), rgba(255,255,255,.25) 55%, rgba(255,255,255,.12));
+    border: 1px solid var(--glass-edge);
+    -webkit-backdrop-filter: blur(16px) saturate(200%); backdrop-filter: blur(16px) saturate(200%);
+    box-shadow: 0 10px 24px rgba(40, 30, 120, .3), inset 0 2px 1px rgba(255,255,255,.9), inset 0 -4px 10px rgba(80, 60, 200, .18);
+    text-shadow: 0 1px 2px rgba(255,255,255,.6); transition: transform .15s ease; }
+  .hub:hover { transform: translate(-50%, -50%) scale(1.05); }
+  .hub:active { transform: translate(-50%, -50%) scale(.96); }
   .hub:disabled { cursor: wait; opacity: .85; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hub {
+    background: radial-gradient(circle at 35% 28%, rgba(255,255,255,.45), rgba(255,255,255,.1) 55%, rgba(255,255,255,.05)); text-shadow: 0 1px 3px rgba(0,0,0,.6); } }
+
   .result { text-align: center; min-height: 3.6em; margin-top: 16px; }
   .result .label { color: var(--muted); font-size: .9rem; }
-  .result .food { font-size: 2rem; font-weight: 800; color: var(--accent); }
-  .result .food.pop { animation: pop .4s ease; }
-  @keyframes pop { 0% { transform: scale(.6); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  .result .food { font-size: 2.1rem; font-weight: 800;
+    background: linear-gradient(120deg, #ff5f8f, #8a5bff 50%, #3fa9ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .result .food.pop { animation: pop .45s cubic-bezier(.2, 1.4, .4, 1); }
+  @keyframes pop { 0% { transform: scale(.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
   .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+
   button { font: inherit; }
-  .btn { border: 1px solid var(--border); background: var(--card); color: var(--text);
-    border-radius: 999px; padding: 6px 14px; cursor: pointer; }
-  .btn:hover { border-color: var(--accent); color: var(--accent); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .btn.primary:hover { filter: brightness(1.05); color: #fff; }
+  .btn { border: 1px solid var(--glass-border); background: var(--glass-strong); color: var(--text);
+    border-radius: 999px; padding: 7px 15px; cursor: pointer;
+    -webkit-backdrop-filter: blur(12px) saturate(180%); backdrop-filter: blur(12px) saturate(180%);
+    box-shadow: inset 0 1px 0 var(--glass-edge), 0 2px 8px rgba(40, 30, 120, .08); transition: background .15s, transform .15s; }
+  .btn:hover { background: var(--hover); transform: translateY(-1px); }
+  .btn.primary { color: #fff; border-color: rgba(255,255,255,.5);
+    background: linear-gradient(135deg, rgba(120, 110, 255, .92), rgba(80, 160, 255, .88));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 6px 16px rgba(90, 90, 255, .35); }
+  .btn.primary:hover { filter: brightness(1.06); }
+
   h2 { font-size: 1.05rem; margin: 0 0 10px; }
   .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
   .add-row { display: flex; gap: 6px; margin-bottom: 10px; }
-  .add-row input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px;
-    border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; }
-  .add-row input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .add-row input { flex: 1; min-width: 0; padding: 8px 12px; border-radius: 14px;
+    border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: inherit;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,.06); }
+  .add-row input::placeholder { color: var(--muted); }
+  .add-row input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   ul { list-style: none; margin: 0; padding: 0; }
   #menu { max-height: 280px; overflow-y: auto; }
-  #menu li { display: flex; align-items: center; justify-content: space-between;
-    padding: 6px 8px; border-radius: 8px; }
-  #menu li:hover { background: var(--bg); }
-  #menu .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+  #menu li { display: flex; align-items: center; justify-content: space-between; padding: 5px 6px; border-radius: 12px; }
+  #menu li:hover { background: var(--hover); }
+  #menu .dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 8px; vertical-align: -1px;
+    box-shadow: inset 0 1px 1px rgba(255,255,255,.7); }
   #menu li.off span.name { text-decoration: line-through; color: var(--muted); }
-  .icon-btn { border: none; background: none; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
-  .icon-btn:hover { color: var(--accent); background: var(--card); }
+  .icon-btn { border: none; background: none; color: var(--muted); cursor: pointer; padding: 3px 7px; border-radius: 8px; }
+  .icon-btn:hover { color: var(--text); background: var(--hover); }
   .hint { color: var(--muted); font-size: .85rem; margin: 8px 0 0; }
   #history { display: flex; flex-wrap: wrap; gap: 6px; }
-  #history li { background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
-    padding: 2px 10px; font-size: .85rem; }
-  .side { display: grid; gap: 16px; }
-  footer { text-align: center; margin-top: 28px; color: var(--muted); font-size: .85rem; }
-  footer a { color: var(--accent); }
+  #history li { background: var(--glass-strong); border: 1px solid var(--glass-border); border-radius: 999px;
+    padding: 2px 10px; font-size: .85rem; box-shadow: inset 0 1px 0 var(--glass-edge); }
+  .side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  footer { text-align: center; margin-top: 28px; font-size: .85rem; }
+  footer a { color: var(--text); opacity: .7; text-decoration: none; }
+  footer a:hover { opacity: 1; }
 </style>
 </head>
 <body>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 <main>
   <header>
     <h1>🍜 今天吃什么</h1>
@@ -80,9 +131,19 @@
   </header>
 
   <div class="layout">
-    <section class="card">
+    <section class="glass card">
       <div class="wheel-wrap">
-        <div class="pointer"></div>
+        <svg class="pointer" viewBox="0 0 38 48" aria-hidden="true">
+          <defs>
+            <linearGradient id="pg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#ffffff" stop-opacity=".95"/>
+              <stop offset="1" stop-color="#c9c4ff" stop-opacity=".85"/>
+            </linearGradient>
+          </defs>
+          <path d="M19 47 C12 34 3 26 3 16 A16 16 0 0 1 35 16 C35 26 26 34 19 47 Z" fill="url(#pg)" stroke="rgba(255,255,255,.95)" stroke-width="1.5"/>
+          <circle cx="19" cy="16" r="6" fill="#7a6bff" opacity=".85"/>
+          <ellipse cx="13" cy="10" rx="5" ry="3" fill="#fff" opacity=".8"/>
+        </svg>
         <canvas id="wheel" width="920" height="920" aria-label="菜单转盘"></canvas>
         <button class="hub" id="spin">转！</button>
       </div>
@@ -97,7 +158,7 @@
     </section>
 
     <aside class="side">
-      <section class="card">
+      <section class="glass card">
         <h2>菜单</h2>
         <div class="presets" id="presets"></div>
         <form class="add-row" id="addForm">
@@ -107,7 +168,7 @@
         <ul id="menu"></ul>
         <p class="hint">点名字可以暂时排除 / 恢复，菜单会保存在本机浏览器里。</p>
       </section>
-      <section class="card">
+      <section class="glass card">
         <h2>最近吃过</h2>
         <ul id="history"></ul>
         <p class="hint" id="historyEmpty">还没有记录。</p>
@@ -126,7 +187,7 @@
     '聚餐': ['火锅', '烧烤', '日料', '韩式烤肉', '西餐', '粤式早茶', '小龙虾', '烤鱼'],
     '轻食': ['沙拉', '三明治', '寿司', '饭团', '粥', '关东煮', '轻食碗', '水果'],
   };
-  const COLORS = ['#ff6b35', '#ffb703', '#8ac926', '#1982c4', '#6a4c93', '#ff595e', '#2ec4b6', '#f15bb5', '#fb8500', '#3a86ff'];
+  const COLORS = ['#ff6f91', '#ff9a62', '#f7c948', '#6fd08c', '#3cc8c8', '#4fa8ff', '#7b7bff', '#b57bff', '#f27ad6', '#ff7a7a'];
   const KEY = 'what-to-eat:v1';
 
   const storage = {
@@ -147,43 +208,83 @@
   const active = () => state.items.filter(i => !i.off);
   const persist = () => storage.save(state);
 
+  function rgba(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+  }
+
   function draw() {
     const list = active();
-    const W = canvas.width, c = W / 2, r = c - 10;
+    const W = canvas.width, c = W / 2, r = c - 22;
     ctx.clearRect(0, 0, W, W);
     ctx.save();
     ctx.translate(c, c);
+
+    // frosted base disc so the segments read as tinted glass
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fill();
+
     if (!list.length) {
-      ctx.fillStyle = '#ccc';
-      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#666'; ctx.font = '600 40px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(120,120,160,.7)'; ctx.font = '600 40px sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('先加几道菜吧', 0, -r * 0.45);
-      ctx.restore(); return;
-    }
-    const seg = Math.PI * 2 / list.length;
-    ctx.rotate(rotation);
-    list.forEach((item, i) => {
-      const a0 = -Math.PI / 2 + i * seg;
-      ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a0 + seg); ctx.closePath();
-      ctx.fillStyle = colorOf(item); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 4; ctx.stroke();
+    } else {
+      const seg = Math.PI * 2 / list.length;
       ctx.save();
-      ctx.rotate(a0 + seg / 2);
-      ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-      const size = Math.max(22, Math.min(44, 520 / list.length + 14));
-      ctx.font = `700 ${size}px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`;
-      ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 4;
-      let text = item.name;
-      while (ctx.measureText(text).width > r * 0.62 && text.length > 1) text = text.slice(0, -1);
-      if (text !== item.name) text += '…';
-      // keep labels upright: flip the ones that would sit on the left half of the wheel
-      if (Math.cos(a0 + seg / 2 + rotation) < 0) {
-        ctx.rotate(Math.PI); ctx.textAlign = 'left'; ctx.fillText(text, -(r - 24), 0);
-      } else {
-        ctx.fillText(text, r - 24, 0);
-      }
+      ctx.rotate(rotation);
+      list.forEach((item, i) => {
+        const a0 = -Math.PI / 2 + i * seg, col = colorOf(item);
+        const g = ctx.createRadialGradient(0, 0, r * 0.12, 0, 0, r);
+        g.addColorStop(0, rgba(col, .35));
+        g.addColorStop(0.65, rgba(col, .72));
+        g.addColorStop(1, rgba(col, .9));
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a0 + seg); ctx.closePath();
+        ctx.fillStyle = g; ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3; ctx.stroke();
+
+        ctx.save();
+        ctx.rotate(a0 + seg / 2);
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        const size = Math.max(22, Math.min(44, 520 / list.length + 14));
+        ctx.font = `700 ${size}px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`;
+        ctx.shadowColor = 'rgba(30, 20, 80, .45)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
+        let text = item.name;
+        while (ctx.measureText(text).width > r * 0.6 && text.length > 1) text = text.slice(0, -1);
+        if (text !== item.name) text += '…';
+        // keep labels upright: flip the ones that would sit on the left half of the wheel
+        if (Math.cos(a0 + seg / 2 + rotation) < 0) {
+          ctx.rotate(Math.PI); ctx.textAlign = 'left'; ctx.fillText(text, -(r - 30), 0);
+        } else {
+          ctx.fillText(text, r - 30, 0);
+        }
+        ctx.restore();
+      });
       ctx.restore();
-    });
+    }
+
+    // static glass effects (do not rotate): top-left specular highlight + bottom inner glow
+    const hl = ctx.createLinearGradient(-r, -r, r * 0.4, r * 0.4);
+    hl.addColorStop(0, 'rgba(255,255,255,.55)');
+    hl.addColorStop(0.45, 'rgba(255,255,255,.08)');
+    hl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fillStyle = hl; ctx.fill();
+
+    const inner = ctx.createRadialGradient(0, 0, r * 0.75, 0, 0, r);
+    inner.addColorStop(0, 'rgba(255,255,255,0)');
+    inner.addColorStop(1, 'rgba(255,255,255,.35)');
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fillStyle = inner; ctx.fill();
+
+    // thick glass rim
+    const rim = ctx.createLinearGradient(-r, -r, r, r);
+    rim.addColorStop(0, 'rgba(255,255,255,.95)');
+    rim.addColorStop(0.5, 'rgba(255,255,255,.35)');
+    rim.addColorStop(1, 'rgba(255,255,255,.8)');
+    ctx.beginPath(); ctx.arc(0, 0, r + 8, 0, Math.PI * 2);
+    ctx.lineWidth = 16; ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, r + 8, 0, Math.PI * 2);
+    ctx.lineWidth = 2.5; ctx.strokeStyle = rim; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.stroke();
+
     ctx.restore();
   }
 
