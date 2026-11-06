@@ -138,6 +138,37 @@
   .confetti { position: fixed; pointer-events: none; z-index: 50; font-size: 1.4rem; will-change: transform, opacity; }
   #history li { cursor: default; }
   #history .ago { color: var(--muted); margin-left: 4px; }
+
+  /* ---- recipe card ---- */
+  .recipe { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--glass-border); text-align: left;
+    animation: rise .45s cubic-bezier(.2,.9,.3,1); }
+  .recipe[hidden] { display: none; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .recipe { animation: none; } }
+  .recipe-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .recipe-head h3 { margin: 0; font-size: 1.15rem; }
+  .recipe-head .as { display: block; font-size: .82rem; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 14px; }
+  .chip { font-size: .8rem; padding: 3px 10px; border-radius: 999px; background: var(--glass-strong);
+    border: 1px solid var(--glass-border); box-shadow: inset 0 1px 0 var(--glass-edge); }
+  .recipe h4 { margin: 0 0 8px; font-size: .9rem; color: var(--muted); font-weight: 600; letter-spacing: .04em; }
+  .recipe-body { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 20px; }
+  @media (max-width: 560px) { .recipe-body { grid-template-columns: minmax(0, 1fr); gap: 14px; } }
+  .ing { display: grid; gap: 4px; }
+  .ing li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 10px; border-radius: 10px; font-size: .9rem;
+    background: var(--glass-strong); }
+  .ing li span:last-child { color: var(--muted); text-align: right; }
+  .steps { list-style: none; margin: 0; padding: 0; counter-reset: step; display: grid; gap: 10px; }
+  .steps li { counter-increment: step; position: relative; padding-left: 32px; font-size: .92rem; line-height: 1.55; }
+  .steps li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 50%;
+    display: grid; place-items: center; font-size: .75rem; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, rgba(120, 110, 255, .95), rgba(80, 160, 255, .9)); }
+  .tip { margin: 14px 0 0; padding: 10px 12px; border-radius: 12px; font-size: .88rem; background: var(--glass-strong);
+    border: 1px solid var(--glass-border); }
+  .recipe-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .recipe-links a { text-decoration: none; font-size: .85rem; }
+  .no-recipe { color: var(--muted); margin: 8px 0 0; font-size: .92rem; }
+  .recipe-toggle { flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -173,6 +204,13 @@
         <button class="btn primary" id="accept">就它了 👍</button>
         <button class="btn" id="reject">不想吃，排除再转</button>
       </div>
+      <section class="recipe" id="recipe" hidden aria-labelledby="recipeTitle">
+        <div class="recipe-head">
+          <h3 id="recipeTitle"></h3>
+          <button class="link-btn recipe-toggle" id="recipeToggle" type="button" aria-expanded="true">收起</button>
+        </div>
+        <div id="recipeContent"></div>
+      </section>
     </section>
 
     <aside class="side">
@@ -212,6 +250,170 @@
     '聚餐': ['火锅', '烧烤', '日料', '韩式烤肉', '西餐', '粤式早茶', '小龙虾', '烤鱼'],
     '轻食': ['沙拉', '三明治', '寿司', '饭团', '粥', '关东煮', '轻食碗', '水果'],
   };
+  // Built-in home-style recipes. ing: 'name|amount'. as: the dish actually shown when the menu item is a category.
+  const RECIPES = {
+    '红烧肉': { t: '90 分钟', lv: '中等', n: '3 人份',
+      ing: ['五花肉|500g', '冰糖|30g', '生抽|2 勺', '老抽|1 勺', '料酒|2 勺', '姜|3 片', '葱|2 根', '八角|2 个', '桂皮|1 小段'],
+      steps: ['五花肉切 3cm 方块，冷水下锅加料酒焯水，捞出洗净沥干。', '锅里少放油，小火把冰糖炒到枣红色起泡，下肉块翻炒上色。', '加姜、葱、八角、桂皮炒香，淋料酒、生抽、老抽。', '加没过肉的开水，大火烧开后转小火炖 60 分钟。', '开大火收汁，汤汁浓稠发亮即可。'],
+      tip: '加水一定用开水，冷水会让肉收紧发柴。' },
+    '番茄炒蛋': { t: '10 分钟', lv: '简单', n: '2 人份',
+      ing: ['番茄|2 个', '鸡蛋|3 个', '葱|1 根', '盐|适量', '糖|1 小勺'],
+      steps: ['番茄顶部划十字，开水烫一下去皮切块；鸡蛋加少许盐打散。', '油热后倒入蛋液，凝固后划散盛出。', '补一点油，下番茄翻炒出汁，加盐和糖。', '倒回鸡蛋翻匀，撒葱花出锅。'],
+      tip: '番茄炒到出沙再回鸡蛋，汤汁更拌饭。' },
+    '宫保鸡丁': { t: '20 分钟', lv: '中等', n: '2 人份',
+      ing: ['鸡腿肉|300g', '花生米|50g', '干辣椒|8 个', '花椒|1 小把', '葱白|2 段', '姜、蒜|适量', '生抽|2 勺', '香醋|2 勺', '糖|1.5 勺', '淀粉|1 小勺'],
+      steps: ['鸡腿去骨切丁，加生抽、料酒、淀粉抓匀腌 10 分钟。', '生抽、醋、糖、淀粉加 3 勺水调成碗汁；花生米小火炸酥。', '油热后小火炒香干辣椒和花椒，下鸡丁大火滑炒到变色。', '加葱段、姜蒜炒匀，倒入碗汁，收到汁裹住鸡丁。', '关火后拌入花生米。'],
+      tip: '花生最后放才能保持酥脆。' },
+    '鱼香肉丝': { t: '20 分钟', lv: '中等', n: '2 人份',
+      ing: ['猪里脊|250g', '木耳|1 小把', '胡萝卜|半根', '青椒|1 个', '郫县豆瓣酱|1 勺', '葱、姜、蒜|适量', '香醋|2 勺', '糖|2 勺', '生抽|1 勺', '淀粉|1 小勺'],
+      steps: ['肉切丝，加盐、料酒、淀粉腌制；木耳、胡萝卜、青椒切丝。', '醋、糖、生抽、淀粉加 3 勺水调成鱼香汁。', '热油滑炒肉丝到变色，盛出。', '下豆瓣酱和姜蒜炒出红油，放配菜炒到断生。', '倒回肉丝，淋鱼香汁，大火翻匀。'],
+      tip: '糖和醋 1:1 是鱼香味的关键。' },
+    '麻婆豆腐': { t: '15 分钟', lv: '简单', n: '2 人份',
+      ing: ['嫩豆腐|1 盒', '牛肉末|100g', '郫县豆瓣酱|1 勺', '豆豉|少许', '辣椒面|1 小勺', '花椒粉|适量', '蒜苗|1 根', '水淀粉|适量'],
+      steps: ['豆腐切块，放进加了盐的开水里煮 2 分钟去豆腥。', '肉末炒散炒酥，下豆瓣酱、豆豉、辣椒面炒出红油。', '加一碗水烧开，放豆腐小火煮 3 分钟。', '分 2～3 次淋水淀粉勾芡，用锅铲推匀，不要翻。', '出锅撒花椒粉和蒜苗。'],
+      tip: '用锅铲背推，豆腐不容易碎。' },
+    '可乐鸡翅': { t: '25 分钟', lv: '简单', n: '2 人份',
+      ing: ['鸡中翅|10 个', '可乐|1 罐（330ml）', '生抽|2 勺', '老抽|半勺', '姜|3 片', '料酒|1 勺'],
+      steps: ['鸡翅两面划几刀，冷水下锅，加姜片、料酒焯水。', '少油中火，把鸡翅两面煎到金黄。', '倒入可乐、生抽、老抽，没过鸡翅。', '大火烧开，转中小火煮 15 分钟。', '大火收汁，汁浓稠地挂在鸡翅上就好。'],
+      tip: '收汁时多翻动，糖分高容易糊。' },
+    '糖醋排骨': { t: '50 分钟', lv: '中等', n: '2 人份',
+      ing: ['小排|500g', '冰糖|30g', '香醋|3 勺', '生抽|2 勺', '老抽|半勺', '料酒|2 勺', '姜|3 片', '白芝麻|少许'],
+      steps: ['排骨焯水，洗净沥干。', '少油把排骨煎到微黄。', '加姜片、料酒、生抽、老抽、冰糖和 2 勺醋，加开水没过。', '小火炖 30 分钟。', '大火收汁，出锅前再淋 1 勺醋，撒芝麻。'],
+      tip: '醋分两次放，最后一勺留住酸香。' },
+    '青椒肉丝': { t: '15 分钟', lv: '简单', n: '2 人份',
+      ing: ['猪里脊|200g', '青椒|3 个', '蒜|2 瓣', '生抽|1 勺', '蚝油|1 勺', '淀粉|1 小勺'],
+      steps: ['肉切丝，加生抽、淀粉和少许油腌 10 分钟。', '青椒切丝。', '大火滑炒肉丝到变白，盛出。', '蒜末爆香，下青椒炒到断生。', '倒回肉丝，加蚝油和少许盐翻匀。'],
+      tip: '青椒别炒太久，保持脆嫩。' },
+    '黄焖鸡米饭': { t: '40 分钟', lv: '简单', n: '2 人份',
+      ing: ['鸡腿|2 个', '干香菇|6 朵', '青椒|1 个', '土豆|1 个（可选）', '冰糖|5 颗', '生抽|2 勺', '老抽|1 勺', '蚝油|1 勺', '姜、蒜|适量', '米饭|2 碗'],
+      steps: ['鸡腿剁块，冷水下锅焯水；香菇泡软。', '少油炒化冰糖，下鸡块翻炒上色。', '加姜蒜、香菇、土豆，调入生抽、老抽、蚝油。', '加热水没过，小火焖 25 分钟。', '放青椒焖 2 分钟收汁，配米饭。'],
+      tip: '用泡香菇的水代替清水，味道更香。' },
+    '麻辣烫': { t: '25 分钟', lv: '简单', n: '2 人份',
+      ing: ['喜欢的菜|丸子、豆皮、娃娃菜、土豆片、宽粉…', '火锅底料|50g', '骨汤或清水|1L', '芝麻酱|2 勺', '蒜末|1 勺', '辣椒油、醋|适量'],
+      steps: ['食材洗净切好。', '炒香火锅底料，加水或骨汤烧开。', '先下难熟的（土豆、丸子），再下青菜，煮熟就捞。', '盛碗，加芝麻酱、蒜末、辣椒油、醋拌匀。'],
+      tip: '芝麻酱先用温水调稀再加，不会结块。' },
+    '沙县小吃': { as: '家常版：拌面 + 扁肉', t: '40 分钟', lv: '简单', n: '2 人份',
+      ing: ['碱水面|200g', '花生酱|2 勺', '生抽|2 勺', '猪肉馅|150g', '馄饨皮|20 张', '骨汤|2 碗', '葱花|适量'],
+      steps: ['花生酱加温水和生抽调开。', '面条煮熟捞出，淋酱汁撒葱花拌匀。', '肉馅加盐和少许水，顺一个方向搅打上劲，包成扁肉。', '骨汤烧开下扁肉，浮起后再煮 1 分钟。'],
+      tip: '肉馅打到起胶，扁肉才有脆弹的口感。' },
+    '兰州拉面': { as: '家常版：清汤牛肉面', t: '2 小时', lv: '中等', n: '3 人份',
+      ing: ['牛腱|500g', '白萝卜|半根', '拉面或细面|3 份', '姜|1 块', '花椒|1 小把', '草果|1 个', '香菜、蒜苗|适量', '辣椒油|适量'],
+      steps: ['牛肉冷水泡出血水，冷水下锅焯水。', '加姜、花椒、草果和足量水，小火炖 1.5 小时。', '捞出牛肉切片；汤加盐，下萝卜片煮软。', '面条煮好入碗，浇汤，放牛肉、萝卜、香菜蒜苗和辣椒油。'],
+      tip: '一清二白三红四绿：汤清、萝卜白、辣油红、香菜绿。' },
+    '烤肉饭': { t: '30 分钟（另需腌制）', lv: '简单', n: '2 人份',
+      ing: ['去骨鸡腿|2 个', '生抽|2 勺', '老抽|半勺', '蜂蜜|1 勺', '蚝油|1 勺', '蒜末|1 勺', '米饭|2 碗', '西兰花或生菜|适量'],
+      steps: ['鸡腿用叉子扎些孔，加所有调料腌 30 分钟以上。', '平底锅不放油，鸡皮朝下，中小火煎出油到金黄。', '翻面煎熟，倒入剩下的腌汁收到浓稠。', '切条铺在米饭上，配焯好的蔬菜。'],
+      tip: '也可以用烤箱 200℃ 烤 20 分钟。' },
+    '螺蛳粉': { t: '20 分钟', lv: '简单', n: '1 人份',
+      ing: ['干米粉|100g（或袋装螺蛳粉）', '螺蛳汤料包|1 包', '酸笋|适量', '腐竹|1 根', '花生米|1 小把', '木耳、青菜|适量', '辣椒油|适量'],
+      steps: ['米粉提前冷水泡 30 分钟，或直接煮 8～10 分钟。', '腐竹泡软切段，炸到起泡；花生炸脆。', '汤料包加水烧开，下米粉、木耳、青菜煮熟。', '盛碗，加酸笋、腐竹、花生和辣椒油。'],
+      tip: '记得开窗通风 😂' },
+    '酸菜鱼': { t: '35 分钟', lv: '中等', n: '3 人份',
+      ing: ['草鱼或黑鱼|1 条（约 1kg）', '酸菜|1 袋', '泡椒|适量', '干辣椒、花椒|适量', '姜、蒜|适量', '蛋清|1 个', '淀粉|1 勺'],
+      steps: ['鱼片成薄片，加盐、料酒、蛋清、淀粉抓匀腌 10 分钟；鱼骨切段。', '姜蒜泡椒炒香，下酸菜炒出酸味，再放鱼骨煎一下。', '加开水煮 8 分钟，捞出酸菜和鱼骨铺在碗底。', '汤保持微开，一片片下鱼片，变白就连汤倒进碗里。', '上面放干辣椒、花椒、蒜末，泼一勺热油。'],
+      tip: '鱼片下锅后别急着搅，等定型再轻轻推。' },
+    '炸鸡汉堡': { t: '40 分钟', lv: '中等', n: '2 人份',
+      ing: ['去骨鸡腿|2 个', '汉堡胚|2 个', '鸡蛋|1 个', '面粉、面包糠|适量', '生菜、番茄|适量', '沙拉酱|适量', '盐、黑胡椒|适量'],
+      steps: ['鸡腿肉拍平，用盐、黑胡椒、料酒腌 20 分钟。', '依次裹面粉、蛋液、面包糠。', '油温 160℃ 炸 5 分钟，捞出升到 180℃ 复炸 1 分钟。', '汉堡胚烤热，依次放生菜、番茄、炸鸡，挤沙拉酱。'],
+      tip: '空气炸锅 200℃ 15 分钟也行，中途翻面喷点油。' },
+    '牛肉面': { t: '2 小时', lv: '中等', n: '3 人份',
+      ing: ['牛腩|500g', '番茄|1 个', '郫县豆瓣酱|1 勺', '冰糖|5 颗', '生抽|2 勺', '老抽|1 勺', '八角、桂皮、香叶|适量', '姜、葱|适量', '面条、青菜|3 份'],
+      steps: ['牛腩切块，焯水洗净。', '炒香豆瓣酱、姜葱和香料，下牛肉翻炒，加番茄块。', '加生抽、老抽、冰糖，开水没过，小火炖 1.5 小时。', '面条和青菜煮熟，浇上牛肉和汤。'],
+      tip: '用高压锅压 25 分钟就够了。' },
+    '炸酱面': { t: '30 分钟', lv: '简单', n: '3 人份',
+      ing: ['五花肉|300g', '黄酱|3 勺', '甜面酱|2 勺', '葱、姜|适量', '手擀面|3 份', '黄瓜、胡萝卜、豆芽|适量'],
+      steps: ['黄酱和甜面酱加少许水调开。', '五花肉切小丁，小火煸出油。', '下葱姜和酱，小火慢熬 15 分钟，不停搅拌。', '菜码切丝；面条煮熟过凉水。', '面上放菜码，加炸酱拌匀。'],
+      tip: '熬到油和酱分离、酱色发亮就好了。' },
+    '热干面': { t: '15 分钟', lv: '简单', n: '1 人份',
+      ing: ['碱水面|150g', '芝麻酱|2 勺', '香油|1 勺', '生抽|1 勺', '萝卜丁或酸豆角|适量', '葱花|适量', '辣椒油|适量'],
+      steps: ['芝麻酱加香油和少量温水，顺一个方向调开。', '面条煮到八成熟，捞出拌少许香油，抖散晾凉。', '吃之前放开水里烫 10 秒。', '加芝麻酱、生抽、萝卜丁、葱花、辣椒油拌匀。'],
+      tip: '面要先拌油晾开，口感才有嚼劲。' },
+    '刀削面': { t: '20 分钟', lv: '简单', n: '2 人份',
+      ing: ['现成刀削面|300g', '番茄|2 个', '鸡蛋|2 个', '葱|1 根', '山西老陈醋|适量'],
+      steps: ['番茄切块；鸡蛋炒散盛出。', '番茄炒出汁，加少许水煮成卤，倒回鸡蛋，加盐调味。', '刀削面煮 5～6 分钟到熟透。', '捞出浇卤，按口味加醋。'],
+      tip: '想挑战手削的话：面团要和得硬，刀从外往里削。' },
+    '饺子': { t: '90 分钟', lv: '中等', n: '3～4 人份',
+      ing: ['面粉|500g', '水|250ml', '猪肉馅|400g', '白菜或韭菜|500g', '葱姜水|适量', '生抽、蚝油|各 1 勺', '香油|1 勺', '盐|适量'],
+      steps: ['面粉加水和成面团，醒 30 分钟。', '白菜切碎，加盐杀水后挤干；肉馅分次加葱姜水搅上劲，调味。', '肉馅里先拌香油，再拌入白菜。', '面团搓条切剂子，擀皮包馅。', '水开下饺子，煮开后点三次凉水，饺子鼓起就熟了。'],
+      tip: '先放油再拌菜，油会锁住水分，馅不容易出汤。' },
+    '馄饨': { t: '30 分钟', lv: '简单', n: '2 人份',
+      ing: ['馄饨皮|30 张', '猪肉馅|250g', '鸡蛋|1 个', '葱姜水|适量', '虾皮、紫菜|1 小把', '葱花|适量', '生抽、香油|适量'],
+      steps: ['肉馅加盐、生抽、鸡蛋，分次加葱姜水打上劲。', '取少许馅放在皮上，对折后两角捏合。', '碗里放虾皮、紫菜、葱花、生抽、香油。', '馄饨煮到浮起后再煮 1 分钟，连汤舀进碗里。'],
+      tip: '包多了可以冷冻，吃的时候不用解冻直接煮。' },
+    '凉皮': { t: '40 分钟', lv: '中等', n: '2 人份',
+      ing: ['中筋面粉|100g', '小麦淀粉|50g', '水|300ml', '黄瓜|1 根', '蒜水|2 勺', '香醋、生抽|适量', '辣椒油|适量'],
+      steps: ['面粉、淀粉加水，搅成没有颗粒的稀面糊。', '平盘刷油，舀一勺面糊摊薄。', '水开后放盘，盖盖大火蒸 2 分钟，到起大泡。', '取出放在冷水上降温，揭下凉皮，刷一层油。', '切条，加黄瓜丝、蒜水、醋、生抽、辣椒油拌匀。'],
+      tip: '每次舀面糊前都搅一下，沉淀了会不均匀。' },
+    '重庆小面': { t: '15 分钟', lv: '简单', n: '1 人份',
+      ing: ['碱水面|150g', '青菜|1 小把', '猪油|1 小勺', '生抽|2 勺', '醋|1 勺', '辣椒油|2 勺', '花椒面、芝麻酱|少许', '芽菜、花生碎、葱花|适量'],
+      steps: ['碗里放猪油、生抽、醋、辣椒油、花椒面、芝麻酱。', '舀一勺煮面的热汤，把调料化开。', '面和青菜煮熟，捞进碗里。', '撒芽菜、花生碎、葱花，拌匀。'],
+      tip: '调料是灵魂，辣椒油要香，不能只有辣。' },
+    '火锅': { t: '30 分钟', lv: '简单', n: '4 人份',
+      ing: ['火锅底料|1 块', '牛肉卷、羊肉卷|各 1 盒', '毛肚、虾滑|适量', '豆腐、土豆、藕片|适量', '宽粉、青菜|适量', '蘸料|香油 + 蒜泥 + 蚝油 + 香菜'],
+      steps: ['底料小火炒化，加水大火烧开。', '荤素食材洗净切好装盘。', '先下不容易熟的（丸子、土豆），再涮肉和蔬菜。', '毛肚"七上八下"，涮 15 秒左右就好。'],
+      tip: '鸳鸯锅可以照顾不吃辣的朋友。' },
+    '烧烤': { as: '家常版：烤箱烧烤', t: '45 分钟', lv: '简单', n: '3 人份',
+      ing: ['羊肉、鸡翅或五花肉|适量', '玉米、茄子、韭菜|适量', '孜然粉|2 勺', '辣椒面|1 勺', '盐、油|适量', '竹签|若干'],
+      steps: ['肉切块，加盐、油、少许孜然腌 20 分钟，穿成串。', '烤箱 220℃ 预热，烤盘垫锡纸。', '烤 10 分钟后翻面，刷油撒孜然和辣椒面。', '再烤 8～10 分钟到焦香。'],
+      tip: '竹签提前泡水，烤的时候不容易焦。' },
+    '日料': { as: '家常版：亲子丼', t: '20 分钟', lv: '简单', n: '1 人份',
+      ing: ['鸡腿肉|150g', '洋葱|半个', '鸡蛋|2 个', '米饭|1 碗', '生抽|1.5 勺', '味淋|1 勺', '糖|半勺', '葱花|适量'],
+      steps: ['鸡腿肉切小块，洋葱切丝。', '小锅加 80ml 水、生抽、味淋、糖和洋葱，煮软后放鸡肉煮 5 分钟。', '鸡蛋轻轻打散（不用太匀），分两次淋进去。', '盖盖焖 30 秒到半熟，滑到米饭上，撒葱花。'],
+      tip: '鸡蛋半凝固的时候最好吃。' },
+    '韩式烤肉': { as: '家常版：烤五花包饭', t: '30 分钟', lv: '简单', n: '2 人份',
+      ing: ['五花肉片|400g', '生菜|1 颗', '蒜|1 头', '青辣椒|2 个', '泡菜|适量', '韩式辣酱、大酱|各 1 勺', '香油、糖|少许'],
+      steps: ['辣酱、大酱、香油、糖调成包饭酱。', '平底锅或电烤盘不放油，五花肉煎到两面金黄出油。', '用剪刀剪成小段，把泡菜和蒜片放在旁边一起煎。', '生菜里放肉、蒜、辣椒和酱，包起来一口吃。'],
+      tip: '煎出来的猪油别倒，拿来煎泡菜最香。' },
+    '西餐': { as: '家常版：黑椒牛排', t: '20 分钟', lv: '简单', n: '1 人份',
+      ing: ['牛排|1 块（约 2cm 厚）', '黄油|15g', '蒜|3 瓣', '迷迭香|1 枝（可选）', '盐、黑胡椒|适量', '芦笋或土豆|适量'],
+      steps: ['牛排提前 30 分钟拿出来回温，擦干表面，撒盐。', '锅烧到冒烟，下牛排，每面煎 1.5～2 分钟。', '加黄油、蒜和迷迭香，用勺子舀黄油不停淋在牛排上。', '出锅静置 5 分钟再切，撒现磨黑胡椒。'],
+      tip: '黑胡椒最后撒，高温会让它发苦。' },
+    '粤式早茶': { as: '家常版：豉汁蒸排骨', t: '30 分钟', lv: '简单', n: '2 人份',
+      ing: ['排骨|400g', '豆豉|1 勺', '蒜末|2 勺', '生抽|1 勺', '蚝油|1 勺', '糖|半勺', '淀粉|1 勺', '红椒|少许'],
+      steps: ['排骨剁小块，清水泡 20 分钟去血水，沥干。', '豆豉切碎，和蒜末用少许油炒香。', '排骨加豉蒜、生抽、蚝油、糖、淀粉抓匀，腌 15 分钟。', '平铺在盘里，水开后大火蒸 15 分钟。'],
+      tip: '排骨铺成一层，受热更均匀。' },
+    '小龙虾': { t: '40 分钟', lv: '中等', n: '3 人份',
+      ing: ['小龙虾|1.5kg', '麻辣火锅底料|半块', '干辣椒、花椒|适量', '姜、蒜、葱|适量', '啤酒|1 罐', '生抽|2 勺', '糖|1 勺'],
+      steps: ['小龙虾刷洗干净，剪掉虾头前部（去掉胃囊），抽掉虾线。', '热油下小龙虾，炒到变红盛出。', '另起锅炒香姜蒜、干辣椒、花椒和底料。', '倒回小龙虾翻匀，加啤酒、生抽、糖，煮 10 分钟。', '大火收汁。'],
+      tip: '挑虾腹白净、壳青亮的，更干净。' },
+    '烤鱼': { t: '50 分钟', lv: '中等', n: '3 人份',
+      ing: ['草鱼或鲈鱼|1 条', '洋葱|1 个', '土豆、藕片、豆芽|适量', '火锅底料|半块', '干辣椒、花椒|适量', '姜、蒜|适量', '孜然粉|1 勺', '香菜|适量'],
+      steps: ['鱼从背部剖开平铺，两面划刀，抹盐、料酒和姜片腌 20 分钟。', '鱼身刷油撒孜然，烤箱 220℃ 烤 20 分钟。', '炒香底料、姜蒜、辣椒和花椒，加水和配菜煮熟。', '把配菜和汤汁浇在鱼上，再烤 5 分钟，撒香菜。'],
+      tip: '烤盘底下垫洋葱丝，鱼不粘还更香。' },
+    '沙拉': { t: '10 分钟', lv: '简单', n: '1 人份',
+      ing: ['混合叶菜|1 大把', '小番茄|6 个', '黄瓜|半根', '水煮蛋|1 个', '鸡胸肉或金枪鱼|适量', '橄榄油|2 勺', '醋|1 勺', '蜂蜜|半勺'],
+      steps: ['叶菜洗净后彻底沥干。', '小番茄对半切，黄瓜切片，鸡蛋切块。', '橄榄油、醋、蜂蜜、盐、黑胡椒调成油醋汁。', '所有食材放进大碗，吃之前淋汁拌匀。'],
+      tip: '菜叶一定要干，酱汁才挂得住。' },
+    '三明治': { t: '10 分钟', lv: '简单', n: '1 人份',
+      ing: ['吐司|2 片', '鸡蛋|1 个', '火腿|2 片', '芝士|1 片', '生菜、番茄|适量', '沙拉酱|适量'],
+      steps: ['吐司放平底锅，小火烤到两面微黄。', '煎一个鸡蛋，火腿稍微煎一下。', '吐司抹沙拉酱，依次叠生菜、番茄、火腿、鸡蛋、芝士。', '盖上另一片，用保鲜膜包紧，对角切开。'],
+      tip: '包好保鲜膜再切，切面整齐不散。' },
+    '寿司': { t: '40 分钟', lv: '中等', n: '2 人份',
+      ing: ['寿司米或东北大米|2 杯', '海苔|4 张', '米醋|2 勺', '糖|1 勺', '黄瓜|1 根', '蟹棒|4 根', '玉子烧或煎蛋|适量', '肉松|适量'],
+      steps: ['米饭煮得稍硬，趁热拌入米醋、糖和少许盐，扇凉。', '竹帘上铺海苔，均匀铺一层米饭，上端留 2cm。', '摆上黄瓜条、蟹棒、蛋条和肉松。', '用竹帘卷紧压实，刀沾水后切段。'],
+      tip: '每切一刀都给刀沾点水，就不会粘米。' },
+    '饭团': { t: '15 分钟', lv: '简单', n: '2 人份',
+      ing: ['温热米饭|2 碗', '金枪鱼罐头|半罐', '沙拉酱|1 勺', '海苔|2 片', '盐、芝麻|少许'],
+      steps: ['金枪鱼沥油，和沙拉酱拌成馅。', '手沾一点盐水，取一团米饭压平，中间放馅。', '包起来，捏成三角形。', '包上海苔条，撒点芝麻。'],
+      tip: '米饭温热的时候最好捏形。' },
+    '粥': { as: '皮蛋瘦肉粥', t: '50 分钟', lv: '简单', n: '2 人份',
+      ing: ['大米|100g', '猪里脊|100g', '皮蛋|2 个', '姜丝|适量', '葱花|适量', '盐、白胡椒|适量', '香油|少许'],
+      steps: ['大米洗净，加 10 倍水大火烧开。', '转小火煮 30 分钟，期间搅拌防粘底。', '肉丝用盐和淀粉腌好；皮蛋切丁。', '放入肉丝、皮蛋、姜丝再煮 5 分钟。', '加盐和白胡椒调味，撒葱花，淋香油。'],
+      tip: '米提前冻一晚，熬出来更快更绵。' },
+    '关东煮': { t: '40 分钟', lv: '简单', n: '3 人份',
+      ing: ['白萝卜|半根', '鱼丸、蟹棒、鱼豆腐|适量', '魔芋结|适量', '鸡蛋|3 个', '海带|1 段', '木鱼花|1 把（或鲣鱼粉）', '生抽、味淋|各 2 勺'],
+      steps: ['海带冷水泡 30 分钟，小火煮到快开时取出，加木鱼花煮 2 分钟后滤掉。', '加生抽、味淋和盐，调成汤底。', '萝卜切厚片先煮 20 分钟；鸡蛋煮熟剥壳。', '放入其他食材，小火煮 10 分钟入味。'],
+      tip: '萝卜切面削一圈边，久煮也不会碎。' },
+    '轻食碗': { as: '鸡胸藜麦碗', t: '30 分钟', lv: '简单', n: '1 人份',
+      ing: ['鸡胸肉|1 块', '藜麦|50g（或糙米饭）', '牛油果|半个', '西兰花|1 小朵', '玉米粒|2 勺', '小番茄|4 个', '酸奶|2 勺', '柠檬汁|少许'],
+      steps: ['藜麦洗净，水开后煮 12 分钟，沥干。', '鸡胸用盐、黑胡椒、橄榄油腌 10 分钟，平底锅每面煎 4 分钟，静置后切片。', '西兰花和玉米焯熟。', '所有食材分区摆进碗里，酸奶加柠檬汁和黑胡椒调成酱淋上。'],
+      tip: '鸡胸先用刀背拍匀厚度，煎出来不柴。' },
+    '水果': { as: '水果酸奶杯', t: '5 分钟', lv: '简单', n: '1 人份',
+      ing: ['酸奶|200g', '燕麦脆|30g', '喜欢的水果|草莓、香蕉、蓝莓、芒果…', '蜂蜜|少许（可选）'],
+      steps: ['水果洗净，切小块。', '杯底铺一层燕麦脆。', '一层酸奶、一层水果，重复叠放。', '顶上点缀水果，淋一点蜂蜜。'],
+      tip: '燕麦脆现吃现放，泡久了就不脆了。' },
+  };
+
   const COLORS = ['#ff6f91', '#ff9a62', '#f7c948', '#6fd08c', '#3cc8c8', '#4fa8ff', '#7b7bff', '#b57bff', '#f27ad6', '#ff7a7a'];
   const KEY = 'what-to-eat:v1';
 
@@ -260,7 +462,7 @@
   }
 
   const active = () => state.items.filter(i => !i.off);
-  const persist = () => storage.save({ ...state, soundOn });
+  const persist = () => storage.save({ ...state, soundOn, recipeOpen });
 
   function rgba(hex, a) {
     const n = parseInt(hex.slice(1), 16);
@@ -293,7 +495,9 @@
         g.addColorStop(1, rgba(col, .97));
         const isWin = winner === item.name, dim = winner && !isWin;
         ctx.globalAlpha = dim ? 1 - 0.3 * glow : 1;
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a0 + seg); ctx.closePath();
+        ctx.beginPath();
+        if (list.length > 1) { ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a0 + seg); ctx.closePath(); }
+        else ctx.arc(0, 0, r, 0, Math.PI * 2);  // a single dish: full disc, no divider line
         ctx.fillStyle = g; ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3; ctx.stroke();
         if (isWin && glow > 0) {
@@ -363,6 +567,7 @@
     $('spin').disabled = true;
     $('resultActions').hidden = true;
     $('resultLabel').textContent = '转呀转……';
+    $('recipe').hidden = true;
     $('resultFood').textContent = '';
 
     const seg = Math.PI * 2 / list.length;
@@ -407,7 +612,62 @@
   }
   function clearWinner() { winner = null; glow = 0; }
 
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function searchLinks(q) {
+    const box = el('div', 'recipe-links');
+    [['在下厨房搜做法', `https://www.xiachufang.com/search/?keyword=${encodeURIComponent(q)}`],
+     ['在 B 站看视频', `https://search.bilibili.com/all?keyword=${encodeURIComponent(q + ' 做法')}`]].forEach(([t, href]) => {
+      const a = el('a', 'btn', t); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      box.appendChild(a);
+    });
+    return box;
+  }
+  let recipeOpen = saved?.recipeOpen !== false;
+  function renderRecipe(name) {
+    const box = $('recipe'), content = $('recipeContent'), title = $('recipeTitle');
+    if (!name) { box.hidden = true; return; }
+    const r = RECIPES[name];
+    const dish = r?.as ? r.as.replace(/^家常版：/, '') : name;
+    title.textContent = '📖 ' + name + ' 怎么做';
+    if (r?.as) title.appendChild(el('span', 'as', r.as));
+    content.innerHTML = '';
+    if (r) {
+      const chips = el('div', 'chips');
+      ['⏱ ' + r.t, '🔥 ' + r.lv, '🍽 ' + r.n].forEach(t => chips.appendChild(el('span', 'chip', t)));
+      const body = el('div', 'recipe-body');
+      const left = el('div'), right = el('div');
+      left.appendChild(el('h4', null, '食材'));
+      const ing = el('ul', 'ing');
+      r.ing.forEach(x => { const [a, b] = x.split('|'); const li = el('li'); li.append(el('span', null, a), el('span', null, b || '')); ing.appendChild(li); });
+      left.appendChild(ing);
+      right.appendChild(el('h4', null, '步骤'));
+      const ol = el('ol', 'steps');
+      r.steps.forEach(x => ol.appendChild(el('li', null, x)));
+      right.appendChild(ol);
+      body.append(left, right);
+      content.append(chips, body);
+      if (r.tip) content.appendChild(el('p', 'tip', '💡 ' + r.tip));
+    } else {
+      content.appendChild(el('p', 'no-recipe', '这道菜还没有内置菜谱，可以去这里找找：'));
+    }
+    content.appendChild(searchLinks(dish));
+    content.hidden = !recipeOpen;
+    syncRecipeToggle();
+    box.hidden = false;
+  }
+  function syncRecipeToggle() {
+    const t = $('recipeToggle');
+    t.textContent = recipeOpen ? '收起' : '展开菜谱';
+    t.setAttribute('aria-expanded', recipeOpen);
+  }
+
   function showResult(name, label) {
+    renderRecipe(name);
     canvas.setAttribute('aria-label', name ? `菜单转盘，结果：${name}` : '菜单转盘');
     current = name;
     $('resultLabel').textContent = label;
@@ -544,6 +804,9 @@
     const item = state.items.find(i => i.name === current && !i.off);
     if (item) { item.off = true; clearWinner(); update(); }
     spin();
+  };
+  $('recipeToggle').onclick = () => {
+    recipeOpen = !recipeOpen; $('recipeContent').hidden = !recipeOpen; syncRecipeToggle(); persist();
   };
   $('restoreAll').onclick = () => { if (spinning) return; state.items.forEach(i => { i.off = false; }); clearWinner(); update(); };
   $('clearHistory').onclick = () => { state.history = []; persist(); renderHistory(); };
