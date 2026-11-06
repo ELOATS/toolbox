@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>今天吃什么</title>
+<style>
+  :root {
+    --bg: #fff8f0; --card: #ffffff; --text: #2b2118; --muted: #8a7a6b;
+    --accent: #ff6b35; --accent-2: #ffb703; --border: #f0e2d2;
+    --shadow: 0 8px 24px rgba(120, 70, 20, .12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1712; --card: #28211a; --text: #f5ebe0; --muted: #b3a291;
+      --accent: #ff7f50; --accent-2: #ffc94d; --border: #3a3027;
+      --shadow: 0 8px 24px rgba(0, 0, 0, .4); }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { text-align: center; margin-bottom: 20px; }
+  h1 { margin: 0; font-size: 2rem; }
+  header p { margin: 6px 0 0; color: var(--muted); }
+  .layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 16px; box-shadow: var(--shadow); }
+  .wheel-wrap { position: relative; width: 100%; max-width: 460px; margin: 0 auto; aspect-ratio: 1; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .pointer { position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent;
+    border-top: 30px solid var(--accent); filter: drop-shadow(0 2px 2px rgba(0,0,0,.3)); z-index: 2; }
+  .hub { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 22%; aspect-ratio: 1; border-radius: 50%; border: 4px solid var(--card);
+    background: var(--accent); color: #fff; font-size: 1.1rem; font-weight: 700;
+    cursor: pointer; box-shadow: var(--shadow); }
+  .hub:disabled { cursor: wait; opacity: .85; }
+  .result { text-align: center; min-height: 3.6em; margin-top: 16px; }
+  .result .label { color: var(--muted); font-size: .9rem; }
+  .result .food { font-size: 2rem; font-weight: 800; color: var(--accent); }
+  .result .food.pop { animation: pop .4s ease; }
+  @keyframes pop { 0% { transform: scale(.6); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+  button { font: inherit; }
+  .btn { border: 1px solid var(--border); background: var(--card); color: var(--text);
+    border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.05); color: #fff; }
+  h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .add-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .add-row input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; }
+  .add-row input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  #menu { max-height: 280px; overflow-y: auto; }
+  #menu li { display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 8px; border-radius: 8px; }
+  #menu li:hover { background: var(--bg); }
+  #menu .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+  #menu li.off span.name { text-decoration: line-through; color: var(--muted); }
+  .icon-btn { border: none; background: none; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+  .icon-btn:hover { color: var(--accent); background: var(--card); }
+  .hint { color: var(--muted); font-size: .85rem; margin: 8px 0 0; }
+  #history { display: flex; flex-wrap: wrap; gap: 6px; }
+  #history li { background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+    padding: 2px 10px; font-size: .85rem; }
+  .side { display: grid; gap: 16px; }
+  footer { text-align: center; margin-top: 28px; color: var(--muted); font-size: .85rem; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🍜 今天吃什么</h1>
+    <p>选择困难？交给转盘吧。</p>
+  </header>
+
+  <div class="layout">
+    <section class="card">
+      <div class="wheel-wrap">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="920" height="920" aria-label="菜单转盘"></canvas>
+        <button class="hub" id="spin">转！</button>
+      </div>
+      <div class="result" aria-live="polite">
+        <div class="label" id="resultLabel">点中间的按钮开始</div>
+        <div class="food" id="resultFood"></div>
+      </div>
+      <div class="actions" id="resultActions" hidden>
+        <button class="btn primary" id="accept">就它了 👍</button>
+        <button class="btn" id="reject">不想吃，排除再转</button>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="card">
+        <h2>菜单</h2>
+        <div class="presets" id="presets"></div>
+        <form class="add-row" id="addForm">
+          <input id="addInput" placeholder="加一道菜，多个用逗号或空格分开" maxlength="60">
+          <button class="btn primary" type="submit">添加</button>
+        </form>
+        <ul id="menu"></ul>
+        <p class="hint">点名字可以暂时排除 / 恢复，菜单会保存在本机浏览器里。</p>
+      </section>
+      <section class="card">
+        <h2>最近吃过</h2>
+        <ul id="history"></ul>
+        <p class="hint" id="historyEmpty">还没有记录。</p>
+      </section>
+    </aside>
+  </div>
+  <footer><a href="../">← 返回首页</a></footer>
+</main>
+
+<script>
+(() => {
+  const PRESETS = {
+    '家常': ['红烧肉', '番茄炒蛋', '宫保鸡丁', '鱼香肉丝', '麻婆豆腐', '可乐鸡翅', '糖醋排骨', '青椒肉丝'],
+    '外卖': ['黄焖鸡米饭', '麻辣烫', '沙县小吃', '兰州拉面', '烤肉饭', '螺蛳粉', '酸菜鱼', '炸鸡汉堡'],
+    '面食': ['牛肉面', '炸酱面', '热干面', '刀削面', '饺子', '馄饨', '凉皮', '重庆小面'],
+    '聚餐': ['火锅', '烧烤', '日料', '韩式烤肉', '西餐', '粤式早茶', '小龙虾', '烤鱼'],
+    '轻食': ['沙拉', '三明治', '寿司', '饭团', '粥', '关东煮', '轻食碗', '水果'],
+  };
+  const COLORS = ['#ff6b35', '#ffb703', '#8ac926', '#1982c4', '#6a4c93', '#ff595e', '#2ec4b6', '#f15bb5', '#fb8500', '#3a86ff'];
+  const KEY = 'what-to-eat:v1';
+
+  const storage = {
+    load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } },
+    save(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch {} },
+  };
+
+  const saved = storage.load();
+  let state = {
+    items: Array.isArray(saved?.items) ? saved.items : PRESETS['外卖'].map(name => ({ name, off: false })),
+    history: Array.isArray(saved?.history) ? saved.history : [],
+  };
+
+  const $ = id => document.getElementById(id);
+  const canvas = $('wheel'), ctx = canvas.getContext('2d');
+  let rotation = 0, spinning = false, current = null;
+
+  const active = () => state.items.filter(i => !i.off);
+  const persist = () => storage.save(state);
+
+  function draw() {
+    const list = active();
+    const W = canvas.width, c = W / 2, r = c - 10;
+    ctx.clearRect(0, 0, W, W);
+    ctx.save();
+    ctx.translate(c, c);
+    if (!list.length) {
+      ctx.fillStyle = '#ccc';
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#666'; ctx.font = '600 40px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('先加几道菜吧', 0, -r * 0.45);
+      ctx.restore(); return;
+    }
+    const seg = Math.PI * 2 / list.length;
+    ctx.rotate(rotation);
+    list.forEach((item, i) => {
+      const a0 = -Math.PI / 2 + i * seg;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a0 + seg); ctx.closePath();
+      ctx.fillStyle = colorOf(item); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.save();
+      ctx.rotate(a0 + seg / 2);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      const size = Math.max(22, Math.min(44, 520 / list.length + 14));
+      ctx.font = `700 ${size}px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`;
+      ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 4;
+      let text = item.name;
+      while (ctx.measureText(text).width > r * 0.62 && text.length > 1) text = text.slice(0, -1);
+      if (text !== item.name) text += '…';
+      // keep labels upright: flip the ones that would sit on the left half of the wheel
+      if (Math.cos(a0 + seg / 2 + rotation) < 0) {
+        ctx.rotate(Math.PI); ctx.textAlign = 'left'; ctx.fillText(text, -(r - 24), 0);
+      } else {
+        ctx.fillText(text, r - 24, 0);
+      }
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+
+  function colorOf(item) { return COLORS[state.items.indexOf(item) % COLORS.length]; }
+
+  function spin() {
+    const list = active();
+    if (spinning) return;
+    if (list.length < 2) { showResult(list[0]?.name ?? null, list.length ? '只剩一个了：' : '菜单是空的'); return; }
+    spinning = true;
+    $('spin').disabled = true;
+    $('resultActions').hidden = true;
+    $('resultLabel').textContent = '转呀转……';
+    $('resultFood').textContent = '';
+
+    const seg = Math.PI * 2 / list.length;
+    const pick = Math.floor(Math.random() * list.length);
+    const jitter = (Math.random() - 0.5) * seg * 0.7;
+    // pointer is at top (-90°). Segment i centre sits at -90° + (i+0.5)·seg + rotation, so we need rotation ≡ -(i+0.5)·seg
+    const target = -(pick + 0.5) * seg + jitter;
+    const base = rotation % (Math.PI * 2);
+    let delta = ((target - base) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    delta += Math.PI * 2 * (5 + Math.floor(Math.random() * 3));
+    const start = rotation, dur = 4200 + Math.random() * 800, t0 = performance.now();
+    const ease = t => 1 - Math.pow(1 - t, 4);
+
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function frame(now) {
+      const t = reduce ? 1 : Math.min(1, (now - t0) / dur);
+      rotation = start + delta * ease(t);
+      draw();
+      if (t < 1) requestAnimationFrame(frame);
+      else {
+        spinning = false; $('spin').disabled = false;
+        showResult(list[pick].name, '今天就吃：');
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function showResult(name, label) {
+    current = name;
+    $('resultLabel').textContent = label;
+    const f = $('resultFood');
+    f.textContent = name ?? '';
+    f.classList.remove('pop'); void f.offsetWidth; f.classList.add('pop');
+    $('resultActions').hidden = !name;
+  }
+
+  function renderMenu() {
+    const ul = $('menu');
+    ul.innerHTML = '';
+    state.items.forEach((item, idx) => {
+      const li = document.createElement('li');
+      if (item.off) li.className = 'off';
+      const left = document.createElement('button');
+      left.className = 'icon-btn'; left.style.color = 'inherit'; left.style.textAlign = 'left'; left.style.flex = '1';
+      left.title = item.off ? '恢复' : '暂时排除';
+      left.innerHTML = `<span class="dot" style="background:${item.off ? 'transparent' : COLORS[idx % COLORS.length]};border:1px solid ${COLORS[idx % COLORS.length]}"></span>`;
+      const span = document.createElement('span'); span.className = 'name'; span.textContent = item.name;
+      left.appendChild(span);
+      left.onclick = () => { item.off = !item.off; update(); };
+      const del = document.createElement('button');
+      del.className = 'icon-btn'; del.textContent = '✕'; del.title = '删除'; del.setAttribute('aria-label', `删除${item.name}`);
+      del.onclick = () => { state.items.splice(idx, 1); update(); };
+      li.append(left, del);
+      ul.appendChild(li);
+    });
+  }
+
+  function renderHistory() {
+    const ul = $('history');
+    ul.innerHTML = '';
+    state.history.slice(0, 10).forEach(h => {
+      const li = document.createElement('li');
+      const d = new Date(h.at);
+      li.textContent = `${d.getMonth() + 1}/${d.getDate()} ${h.name}`;
+      ul.appendChild(li);
+    });
+    $('historyEmpty').hidden = state.history.length > 0;
+  }
+
+  function update() { persist(); renderMenu(); draw(); }
+
+  // presets
+  const presetBox = $('presets');
+  Object.keys(PRESETS).forEach(k => {
+    const b = document.createElement('button');
+    b.className = 'btn'; b.textContent = k; b.title = `把菜单换成「${k}」`;
+    b.onclick = () => { if (spinning) return; state.items = PRESETS[k].map(name => ({ name, off: false })); update(); };
+    presetBox.appendChild(b);
+  });
+  const clear = document.createElement('button');
+  clear.className = 'btn'; clear.textContent = '清空';
+  clear.onclick = () => { if (spinning) return; state.items = []; update(); };
+  presetBox.appendChild(clear);
+
+  $('addForm').onsubmit = e => {
+    e.preventDefault();
+    if (spinning) return;
+    const names = $('addInput').value.split(/[,，、\s]+/).map(s => s.trim()).filter(Boolean);
+    const existing = new Set(state.items.map(i => i.name));
+    names.forEach(n => { if (!existing.has(n)) { state.items.push({ name: n, off: false }); existing.add(n); } });
+    $('addInput').value = '';
+    update();
+  };
+
+  $('spin').onclick = spin;
+  $('accept').onclick = () => {
+    if (!current) return;
+    state.history.unshift({ name: current, at: Date.now() });
+    state.history = state.history.slice(0, 30);
+    persist(); renderHistory();
+    $('resultLabel').textContent = '好嘞，祝你吃得开心 😋';
+    $('resultActions').hidden = true;
+  };
+  $('reject').onclick = () => {
+    const item = state.items.find(i => i.name === current && !i.off);
+    if (item) { item.off = true; update(); }
+    spin();
+  };
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); spin(); }
+  });
+
+  renderMenu(); renderHistory(); draw();
+})();
+</script>
+</body>
+</html>

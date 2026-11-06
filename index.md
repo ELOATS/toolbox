@@ -1,37 +1,7 @@
-## Welcome to GitHub Pages
+## 🧰 小工具箱
 
-You can use the [editor on GitHub](https://github.com/ELOATS/hello-world/edit/master/index.md) to maintain and preview the content for your website in Markdown files.
+一些纯前端的小工具，打开就能用，数据只保存在你自己的浏览器里。
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
-
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/ELOATS/hello-world/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+| 工具 | 说明 |
+| --- | --- |
+| [🍜 今天吃什么](tools/what-to-eat.html) | 选择困难？转盘帮你决定。支持自定义菜单、预设分类、排除再转和历史记录。 |
