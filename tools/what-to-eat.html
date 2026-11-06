@@ -5,45 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>今天吃什么</title>
 <meta name="description" content="选择困难？转盘帮你决定今天吃什么。">
-<meta name="theme-color" content="#e9ecff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0b0e1f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111114" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍜</text></svg>">
 <style>
   :root {
-    --bg-1: #e9ecff; --bg-2: #fdeaf5; --text: #1d1b2e; --muted: rgba(29, 27, 46, .58);
+    --bg: #f2f2f7; --text: #1d1b2e; --muted: rgba(29, 27, 46, .58);
     --accent: #5b5bff; --accent-text: #ffffff;
-    --glass: rgba(255, 255, 255, .38); --glass-strong: rgba(255, 255, 255, .55);
-    --glass-border: rgba(255, 255, 255, .75); --glass-edge: rgba(255, 255, 255, .95);
-    --glass-shadow: 0 20px 50px rgba(60, 50, 140, .18), 0 2px 6px rgba(60, 50, 140, .08);
-    --hover: rgba(255, 255, 255, .45);
-    --blob-1: #ff8fb1; --blob-2: #7aa8ff; --blob-3: #ffd27a; --blob-4: #9d7bff;
+    --glass: rgba(255, 255, 255, .72); --glass-strong: rgba(255, 255, 255, .85);
+    --glass-border: rgba(255, 255, 255, .9); --glass-edge: rgba(255, 255, 255, .95);
+    --glass-shadow: 0 12px 32px rgba(20, 20, 40, .08), 0 1px 3px rgba(20, 20, 40, .06);
+    --hover: rgba(0, 0, 0, .04);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg-1: #0b0e1f; --bg-2: #1a1030; --text: #f2f1ff; --muted: rgba(242, 241, 255, .6);
+      --bg: #111114; --text: #f2f1ff; --muted: rgba(242, 241, 255, .6);
       --accent: #8a8cff;
-      --glass: rgba(255, 255, 255, .08); --glass-strong: rgba(255, 255, 255, .14);
-      --glass-border: rgba(255, 255, 255, .18); --glass-edge: rgba(255, 255, 255, .35);
+      --glass: rgba(255, 255, 255, .06); --glass-strong: rgba(255, 255, 255, .1);
+      --glass-border: rgba(255, 255, 255, .1); --glass-edge: rgba(255, 255, 255, .18);
       --glass-shadow: 0 20px 50px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3);
-      --hover: rgba(255, 255, 255, .1);
-      --blob-1: #c2185b; --blob-2: #2f5bff; --blob-3: #b8860b; --blob-4: #6a35ff;
+      --hover: rgba(255, 255, 255, .08);
     }
   }
   * { box-sizing: border-box; }
   html { min-height: 100%; }
   body { margin: 0; min-height: 100vh; color: var(--text); overflow-x: hidden;
-    background: linear-gradient(135deg, var(--bg-1), var(--bg-2)); background-attachment: fixed;
+    background: var(--bg);
     font-family: -apple-system, "SF Pro Display", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif; }
-  /* glowing colour blobs behind the glass */
-  .aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-  .aurora i { position: absolute; width: 46vmax; height: 46vmax; border-radius: 50%;
-    filter: blur(70px); opacity: .7; animation: drift 22s ease-in-out infinite alternate; }
-  .aurora i:nth-child(1) { background: var(--blob-1); top: -12vmax; left: -10vmax; }
-  .aurora i:nth-child(2) { background: var(--blob-2); bottom: -16vmax; right: -12vmax; animation-delay: -6s; }
-  .aurora i:nth-child(3) { background: var(--blob-3); top: 30%; left: 40%; width: 30vmax; height: 30vmax; opacity: .5; animation-delay: -11s; }
-  .aurora i:nth-child(4) { background: var(--blob-4); top: 50%; left: -8vmax; width: 32vmax; height: 32vmax; animation-delay: -3s; }
-  @keyframes drift { to { transform: translate(6vmax, -4vmax) scale(1.12); } }
-  @media (prefers-reduced-motion: reduce) { .aurora i { animation: none; } }
 
   main { max-width: 980px; margin: 0 auto; padding: 28px 16px 48px; }
   header { text-align: center; margin-bottom: 22px; }
@@ -63,7 +51,7 @@
   .card > * { position: relative; }
 
   .wheel-wrap { position: relative; width: 100%; max-width: 460px; margin: 0 auto; aspect-ratio: 1; }
-  canvas { width: 100%; height: 100%; display: block; filter: drop-shadow(0 18px 30px rgba(40, 30, 120, .25)); }
+  canvas { width: 100%; height: 100%; display: block; filter: drop-shadow(0 14px 24px rgba(20, 20, 40, .16)); }
   .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 38px; z-index: 2;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,.25)); }
   .hub { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -153,7 +141,6 @@
 </style>
 </head>
 <body>
-<div class="aurora" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 <main>
   <header>
     <h1>🍜 今天吃什么</h1>
@@ -301,11 +288,11 @@
       list.forEach((item, i) => {
         const a0 = -Math.PI / 2 + i * seg, col = colorOf(item);
         const g = ctx.createRadialGradient(0, 0, r * 0.12, 0, 0, r);
-        g.addColorStop(0, rgba(col, .35));
-        g.addColorStop(0.65, rgba(col, .72));
-        g.addColorStop(1, rgba(col, .9));
+        g.addColorStop(0, rgba(col, .62));
+        g.addColorStop(0.65, rgba(col, .88));
+        g.addColorStop(1, rgba(col, .97));
         const isWin = winner === item.name, dim = winner && !isWin;
-        ctx.globalAlpha = dim ? 1 - 0.4 * glow : 1;
+        ctx.globalAlpha = dim ? 1 - 0.3 * glow : 1;
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a0 + seg); ctx.closePath();
         ctx.fillStyle = g; ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3; ctx.stroke();
@@ -340,7 +327,7 @@
 
     // static glass effects (do not rotate): top-left specular highlight + bottom inner glow
     const hl = ctx.createLinearGradient(-r, -r, r * 0.4, r * 0.4);
-    hl.addColorStop(0, 'rgba(255,255,255,.55)');
+    hl.addColorStop(0, 'rgba(255,255,255,.4)');
     hl.addColorStop(0.45, 'rgba(255,255,255,.08)');
     hl.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fillStyle = hl; ctx.fill();
